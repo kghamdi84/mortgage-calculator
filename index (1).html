@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mortgage Affordability Calculator</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState } = React;
+        
+        const FallbackIcon = ({ children }) => <span style={{fontSize: '24px'}}>{children}</span>;
+        
+        function MortgageCalculator() {
+          const [salary, setSalary] = useState('');
+          const [mortgagePayment, setMortgagePayment] = useState('');
+          const [currency, setCurrency] = useState('SAR');
+          
+          const [utilities, setUtilities] = useState({
+            electricity: '',
+            water: '',
+            maintenance: '',
+            internet: '',
+            mobile: ''
+          });
+          
+          const [familyExpenses, setFamilyExpenses] = useState('');
+          const [groceries, setGroceries] = useState('');
+          const [deliveryApps, setDeliveryApps] = useState('');
+          const [subscriptions, setSubscriptions] = useState('');
+          const [school, setSchool] = useState('');
+          const [car, setCar] = useState({
+            gas: '',
+            maintenance: '',
+            insurance: ''
+          });
+
+          // Helper function to convert empty string to 0 for calculations
+          const toNumber = (value) => value === '' ? 0 : Number(value);
+
+          const totalUtilities = Object.values(utilities).reduce((a, b) => toNumber(a) + toNumber(b), 0);
+          const totalCar = Object.values(car).reduce((a, b) => toNumber(a) + toNumber(b), 0);
+          const totalLivingExpenses = totalUtilities + toNumber(familyExpenses) + toNumber(groceries) + toNumber(deliveryApps) + toNumber(subscriptions) + toNumber(school) + totalCar;
+          const totalObligations = toNumber(mortgagePayment) + totalLivingExpenses;
+          const remaining = toNumber(salary) - totalObligations;
+          
+          const mortgagePercent = toNumber(salary) > 0 ? (toNumber(mortgagePayment) / toNumber(salary)) * 100 : 0;
+          const livingPercent = toNumber(salary) > 0 ? (totalLivingExpenses / toNumber(salary)) * 100 : 0;
+          const totalPercent = toNumber(salary) > 0 ? (totalObligations / toNumber(salary)) * 100 : 0;
+          const remainingPercent = toNumber(salary) > 0 ? (remaining / toNumber(salary)) * 100 : 0;
+          
+          const maxAffordable35 = toNumber(salary) * 0.35;
+          const maxAffordable40 = toNumber(salary) * 0.40;
+          const dti = mortgagePercent / 100;
+          
+          const getRiskLevel = () => {
+            if (dti <= 0.28) return { level: 'Safe', color: 'text-green-600', bg: 'bg-green-100' };
+            if (dti <= 0.35) return { level: 'Moderate', color: 'text-yellow-600', bg: 'bg-yellow-100' };
+            if (dti <= 0.43) return { level: 'High', color: 'text-orange-600', bg: 'bg-orange-100' };
+            return { level: 'Very High', color: 'text-red-600', bg: 'bg-red-100' };
+          };
+          
+          const risk = getRiskLevel();
+
+          const formatCurrency = (value) => {
+            if (value === 0 || value === '') return '0';
+            return new Intl.NumberFormat('en-US', {
+              minimumFractionDigits: 0,
+              maximumFractionDigits: 0
+            }).format(value);
+          };
+
+          const [activeTab, setActiveTab] = useState('dashboard');
+
+          // Show welcome message if no salary entered
+          const showWelcome = salary === '' || toNumber(salary) === 0;
+
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+              <div className="max-w-7xl mx-auto">
+                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <FallbackIcon>🧮</FallbackIcon>
+                      <h1 className="text-3xl font-bold text-gray-800">Mortgage Affordability Calculator</h1>
+                    </div>
+                    <select 
+                      value={currency} 
+                      onChange={(e) => setCurrency(e.target.value)}
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                    >
+                      <option value="SAR">SAR</option>
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="AED">AED</option>
+                    </select>
+                  </div>
+                  
+                  <div className="flex space-x-2 border-b border-gray-200">
+                    <button
+                      onClick={() => setActiveTab('dashboard')}
+                      className={`px-6 py-3 font-medium transition-colors ${
+                        activeTab === 'dashboard' 
+                          ? 'text-indigo-600 border-b-2 border-indigo-600' 
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Dashboard
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('expenses')}
+                      className={`px-6 py-3 font-medium transition-colors ${
+                        activeTab === 'expenses' 
+                          ? 'text-indigo-600 border-b-2 border-indigo-600' 
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Detailed Expenses
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('analysis')}
+                      className={`px-6 py-3 font-medium transition-colors ${
+                        activeTab === 'analysis' 
+                          ? 'text-indigo-600 border-b-2 border-indigo-600' 
+                          : 'text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      Analysis
+                    </button>
+                  </div>
+                </div>
+
+                {activeTab === 'dashboard' && (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-1 space-y-6">
+                      <div className="bg-white rounded-lg shadow-lg p-6">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                          <FallbackIcon>💰</FallbackIcon>
+                          <span className="ml-2">Income & Mortgage</span>
+                        </h2>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Monthly Salary ({currency})
+                            </label>
+                            <input
+                              type="number"
+                              value={salary}
+                              onChange={(e) => setSalary(e.target.value)}
+                              placeholder="Enter your monthly salary"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-lg font-semibold"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Mortgage Payment ({currency})
+                            </label>
+                            <input
+                              type="number"
+                              value={mortgagePayment}
+                              onChange={(e) => setMortgagePayment(e.target.value)}
+                              placeholder="Enter mortgage payment"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-lg font-semibold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-lg shadow-lg p-6">
+                        <h2 className="text-xl font-bold text-gray-800 mb-4">Quick Expenses</h2>
+                        
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Family Expenses</label>
+                            <input
+                              type="number"
+                              value={familyExpenses}
+                              onChange={(e) => setFamilyExpenses(e.target.value)}
+                              placeholder="0"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">School Fees</label>
+                            <input
+                              type="number"
+                              value={school}
+                              onChange={(e) => setSchool(e.target.value)}
+                              placeholder="0"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Subscriptions</label>
+                            <input
+                              type="number"
+                              value={subscriptions}
+                              onChange={(e) => setSubscriptions(e.target.value)}
+                              placeholder="0"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="lg:col-span-2 space-y-6">
+                      {showWelcome ? (
+                        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg shadow-lg p-12 text-white text-center">
+                          <FallbackIcon><span className="text-6xl">🏠</span></FallbackIcon>
+                          <h2 className="text-3xl font-bold mt-4 mb-2">Welcome!</h2>
+                          <p className="text-xl mb-6">Calculate your mortgage affordability in seconds</p>
+                          <div className="bg-white/20 backdrop-blur rounded-lg p-6 text-left max-w-md mx-auto">
+                            <p className="text-lg mb-3">✨ Get started by entering:</p>
+                            <ul className="space-y-2 text-base">
+                              <li>• Your monthly salary</li>
+                              <li>• Desired mortgage payment</li>
+                              <li>• Your monthly expenses</li>
+                            </ul>
+                          </div>
+                          <p className="mt-6 text-sm opacity-90">Your data stays private - all calculations happen in your browser</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className={`${risk.bg} rounded-lg shadow-lg p-6 border-2 ${risk.color.replace('text-', 'border-')}`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-3">
+                                <FallbackIcon>⚠️</FallbackIcon>
+                                <div>
+                                  <h3 className="text-lg font-semibold text-gray-700">Risk Level</h3>
+                                  <p className={`text-3xl font-bold ${risk.color}`}>{risk.level}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm text-gray-600">Debt-to-Income Ratio</p>
+                                <p className={`text-4xl font-bold ${risk.color}`}>{mortgagePercent.toFixed(1)}%</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-white rounded-lg shadow-lg p-6">
+                            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                              <FallbackIcon>📊</FallbackIcon>
+                              <span className="ml-2">Financial Overview</span>
+                            </h2>
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="bg-blue-50 rounded-lg p-4">
+                                <p className="text-sm text-gray-600 mb-1">Mortgage Payment</p>
+                                <p className="text-2xl font-bold text-gray-800">{formatCurrency(mortgagePayment)} {currency}</p>
+                                <p className="text-sm text-blue-600 font-medium">{mortgagePercent.toFixed(1)}% of salary</p>
+                              </div>
+                              
+                              <div className="bg-purple-50 rounded-lg p-4">
+                                <p className="text-sm text-gray-600 mb-1">Living Expenses</p>
+                                <p className="text-2xl font-bold text-gray-800">{formatCurrency(totalLivingExpenses)} {currency}</p>
+                                <p className="text-sm text-purple-600 font-medium">{livingPercent.toFixed(1)}% of salary</p>
+                              </div>
+                              
+                              <div className="bg-red-50 rounded-lg p-4">
+                                <p className="text-sm text-gray-600 mb-1">Total Obligations</p>
+                                <p className="text-2xl font-bold text-gray-800">{formatCurrency(totalObligations)} {currency}</p>
+                                <p className="text-sm text-red-600 font-medium">{totalPercent.toFixed(1)}% of salary</p>
+                              </div>
+                              
+                              <div className={`${remaining >= 0 ? 'bg-green-50' : 'bg-red-50'} rounded-lg p-4`}>
+                                <p className="text-sm text-gray-600 mb-1">Remaining</p>
+                                <p className={`text-2xl font-bold ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {formatCurrency(remaining)} {currency}
+                                </p>
+                                <p className={`text-sm font-medium ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {remainingPercent.toFixed(1)}% of salary
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-white rounded-lg shadow-lg p-6">
+                            <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                              <FallbackIcon>📈</FallbackIcon>
+                              <span className="ml-2">What You Can Afford</span>
+                            </h2>
+                            
+                            <div className="space-y-4">
+                              <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                                <div>
+                                  <p className="font-semibold text-gray-800">Conservative (35% Rule)</p>
+                                  <p className="text-sm text-gray-600">Safe and comfortable</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-2xl font-bold text-green-600">{formatCurrency(maxAffordable35)} {currency}</p>
+                                  <p className="text-sm text-gray-600">per month</p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
+                                <div>
+                                  <p className="font-semibold text-gray-800">Moderate (40% Rule)</p>
+                                  <p className="text-sm text-gray-600">Manageable but tight</p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-2xl font-bold text-yellow-600">{formatCurrency(maxAffordable40)} {currency}</p>
+                                  <p className="text-sm text-gray-600">per month</p>
+                                </div>
+                              </div>
+                              
+                              {remaining < 0 && (
+                                <div className="flex items-center space-x-3 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+                                  <FallbackIcon>⚠️</FallbackIcon>
+                                  <div>
+                                    <p className="font-semibold text-red-800">Warning: Monthly Deficit</p>
+                                    <p className="text-sm text-red-700">
+                                      You're overspending by {formatCurrency(Math.abs(remaining))} {currency}/month 
+                                      ({formatCurrency(Math.abs(remaining) * 12)} {currency}/year)
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'expenses' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white rounded-lg shadow-lg p-6">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4">Utilities</h3>
+                      <div className="space-y-3">
+                        {Object.entries(utilities).map(([key, value]) => (
+                          <div key={key}>
+                            <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">{key}</label>
+                            <input
+                              type="number"
+                              value={value}
+                              onChange={(e) => setUtilities({...utilities, [key]: e.target.value})}
+                              placeholder="0"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                        ))}
+                        <div className="pt-3 border-t border-gray-200">
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-gray-800">Total Utilities</span>
+                            <span className="text-xl font-bold text-indigo-600">{formatCurrency(totalUtilities)} {currency}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow-lg p-6">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4">Car Expenses</h3>
+                      <div className="space-y-3">
+                        {Object.entries(car).map(([key, value]) => (
+                          <div key={key}>
+                            <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">{key}</label>
+                            <input
+                              type="number"
+                              value={value}
+                              onChange={(e) => setCar({...car, [key]: e.target.value})}
+                              placeholder="0"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                        ))}
+                        <div className="pt-3 border-t border-gray-200">
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-gray-800">Total Car</span>
+                            <span className="text-xl font-bold text-indigo-600">{formatCurrency(totalCar)} {currency}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow-lg p-6">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4">Food & Groceries</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Groceries</label>
+                          <input
+                            type="number"
+                            value={groceries}
+                            onChange={(e) => setGroceries(e.target.value)}
+                            placeholder="0"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Apps</label>
+                          <input
+                            type="number"
+                            value={deliveryApps}
+                            onChange={(e) => setDeliveryApps(e.target.value)}
+                            placeholder="0"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                          />
+                        </div>
+                        <div className="pt-3 border-t border-gray-200">
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-gray-800">Total Food</span>
+                            <span className="text-xl font-bold text-indigo-600">{formatCurrency(toNumber(groceries) + toNumber(deliveryApps))} {currency}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow-lg p-6">
+                      <h3 className="text-lg font-bold text-gray-800 mb-4">Other Expenses</h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Family Expenses</label>
+                          <input
+                            type="number"
+                            value={familyExpenses}
+                            onChange={(e) => setFamilyExpenses(e.target.value)}
+                            placeholder="0"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">School Fees</label>
+                          <input
+                            type="number"
+                            value={school}
+                            onChange={(e) => setSchool(e.target.value)}
+                            placeholder="0"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Subscriptions</label>
+                          <input
+                            type="number"
+                            value={subscriptions}
+                            onChange={(e) => setSubscriptions(e.target.value)}
+                            placeholder="0"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'analysis' && (
+                  <div className="space-y-6">
+                    {showWelcome ? (
+                      <div className="bg-white rounded-lg shadow-lg p-12 text-center">
+                        <FallbackIcon><span className="text-6xl">📊</span></FallbackIcon>
+                        <h2 className="text-2xl font-bold text-gray-800 mt-4 mb-2">No Data Yet</h2>
+                        <p className="text-gray-600">Enter your salary and expenses to see detailed analysis</p>
+                      </div>
+                    ) : (
+                      <div className="bg-white rounded-lg shadow-lg p-6">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6">Financial Health Analysis</h2>
+                        
+                        <div className="mb-8">
+                          <h3 className="text-lg font-semibold text-gray-800 mb-4">Monthly Expense Breakdown</h3>
+                          <div className="space-y-3">
+                            {[
+                              { name: 'Mortgage Payment', value: toNumber(mortgagePayment), color: 'bg-blue-500' },
+                              { name: 'Utilities', value: totalUtilities, color: 'bg-purple-500' },
+                              { name: 'Family Expenses', value: toNumber(familyExpenses), color: 'bg-pink-500' },
+                              { name: 'Food & Groceries', value: toNumber(groceries) + toNumber(deliveryApps), color: 'bg-green-500' },
+                              { name: 'Car Expenses', value: totalCar, color: 'bg-yellow-500' },
+                              { name: 'School', value: toNumber(school), color: 'bg-indigo-500' },
+                              { name: 'Subscriptions', value: toNumber(subscriptions), color: 'bg-red-500' }
+                            ].map((item, index) => {
+                              const percentage = toNumber(salary) > 0 ? (item.value / toNumber(salary)) * 100 : 0;
+                              return (
+                                <div key={index}>
+                                  <div className="flex justify-between items-center mb-1">
+                                    <span className="text-sm font-medium text-gray-700">{item.name}</span>
+                                    <span className="text-sm font-semibold text-gray-800">
+                                      {formatCurrency(item.value)} {currency} ({percentage.toFixed(1)}%)
+                                    </span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-3">
+                                    <div 
+                                      className={`${item.color} h-3 rounded-full transition-all duration-500`}
+                                      style={{ width: `${Math.min(percentage, 100)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg p-6 border border-indigo-200">
+                          <h3 className="text-lg font-semibold text-gray-800 mb-4">Recommendations</h3>
+                          <div className="space-y-3">
+                            {mortgagePercent > 40 && (
+                              <div className="flex items-start space-x-3">
+                                <FallbackIcon>⚠️</FallbackIcon>
+                                <p className="text-sm text-gray-700">
+                                  <strong>Critical:</strong> Your mortgage is {mortgagePercent.toFixed(1)}% of your salary. 
+                                  Consider refinancing to get it below {formatCurrency(maxAffordable40)} {currency}/month.
+                                </p>
+                              </div>
+                            )}
+                            
+                            {remaining < 0 && (
+                              <div className="flex items-start space-x-3">
+                                <FallbackIcon>❌</FallbackIcon>
+                                <p className="text-sm text-gray-700">
+                                  <strong>Urgent:</strong> You have a monthly deficit of {formatCurrency(Math.abs(remaining))} {currency}. 
+                                  You need to reduce expenses or increase income immediately.
+                                </p>
+                              </div>
+                            )}
+                            
+                            {toNumber(deliveryApps) > 800 && (
+                              <div className="flex items-start space-x-3">
+                                <FallbackIcon>💡</FallbackIcon>
+                                <p className="text-sm text-gray-700">
+                                  <strong>Opportunity:</strong> Delivery apps cost {formatCurrency(deliveryApps)} {currency}/month. 
+                                  Reducing to {formatCurrency(toNumber(deliveryApps) * 0.7)} {currency} could save {formatCurrency((toNumber(deliveryApps) * 0.3) * 12)} {currency}/year.
+                                </p>
+                              </div>
+                            )}
+                            
+                            {remaining > 0 && remaining < toNumber(salary) * 0.1 && (
+                              <div className="flex items-start space-x-3">
+                                <FallbackIcon>⚠️</FallbackIcon>
+                                <p className="text-sm text-gray-700">
+                                  <strong>Warning:</strong> You only have {formatCurrency(remaining)} {currency} ({remainingPercent.toFixed(1)}%) remaining. 
+                                  Build an emergency fund of at least {formatCurrency(totalObligations * 3)} {currency}.
+                                </p>
+                              </div>
+                            )}
+                            
+                            {mortgagePercent <= 35 && remaining > toNumber(salary) * 0.15 && (
+                              <div className="flex items-start space-x-3">
+                                <FallbackIcon>✅</FallbackIcon>
+                                <p className="text-sm text-gray-700">
+                                  <strong>Excellent:</strong> Your finances are healthy! Consider investing your surplus of {formatCurrency(remaining)} {currency}/month.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-8">
+                          <h3 className="text-lg font-semibold text-gray-800 mb-4">Annual Projections</h3>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-blue-50 rounded-lg p-4">
+                              <p className="text-sm text-gray-600 mb-1">Annual Salary</p>
+                              <p className="text-xl font-bold text-gray-800">{formatCurrency(toNumber(salary) * 12)} {currency}</p>
+                            </div>
+                            <div className="bg-red-50 rounded-lg p-4">
+                              <p className="text-sm text-gray-600 mb-1">Annual Mortgage</p>
+                              <p className="text-xl font-bold text-gray-800">{formatCurrency(toNumber(mortgagePayment) * 12)} {currency}</p>
+                            </div>
+                            <div className="bg-purple-50 rounded-lg p-4">
+                              <p className="text-sm text-gray-600 mb-1">Annual Living</p>
+                              <p className="text-xl font-bold text-gray-800">{formatCurrency(totalLivingExpenses * 12)} {currency}</p>
+                            </div>
+                            <div className={`${remaining >= 0 ? 'bg-green-50' : 'bg-red-50'} rounded-lg p-4`}>
+                              <p className="text-sm text-gray-600 mb-1">Annual Savings</p>
+                              <p className={`text-xl font-bold ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {formatCurrency(remaining * 12)} {currency}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="bg-white rounded-lg shadow-lg p-4 mt-6 text-center">
+                  <p className="text-sm text-gray-600">
+                    Built with React • All calculations happen in your browser • No data is stored or sent anywhere
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        ReactDOM.render(<MortgageCalculator />, document.getElementById('root'));
+    </script>
+</body>
+</html>
